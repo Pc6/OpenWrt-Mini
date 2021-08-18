@@ -31,15 +31,9 @@ jobs:
 
     outputs:
       TOOLCHAIN_STATUS: ${{ steps.toolchain.outputs.TOOLCHAIN_STATUS }}
+      OPENWRTROOT: ${{ steps.update.outputs.OPENWRTROOT }}
 
     steps:
-      - name: Umount Missing Loop Devices
-        id: umount
-        run: |
-          sudo umount /dev/loop*p1 || true
-          sudo losetup -D || true
-          lsblk
-
       - name: Checkout
         uses: actions/checkout@main
 
@@ -52,21 +46,8 @@ jobs:
           sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-1804)
           sudo -E apt-get -qq autoremove --purge
           sudo -E apt-get -qq clean
-          sudo umount /dev/loop*p1 || true
-          sudo losetup -D || true
-          rm -rf openwrt.img
-          fallocate -l 150G openwrt.img
-          echo 'type=83' | sfdisk openwrt.img
-          export LOOP="$(sudo losetup -f -P --show openwrt.img)"
-          echo "LOOP=$LOOP" >> $GITHUB_ENV
-          echo "::set-output name=LOOP::$(echo $LOOP)"
-          sudo mkfs.ext4 ${LOOP}p1
+          sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           mkdir -p openwrt
-          sudo mount ${LOOP}p1 openwrt
-          lsblk
-          sudo chown -R suling:suling openwrt
-          cd openwrt
-          echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
 
       - name: Clone Source Code
         id: clone
@@ -79,7 +60,9 @@ jobs:
       - name: Update Feeds
         id: update
         run: |
-          cd $OPENWRTROOT
+          cd openwrt
+          echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
+          echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
           ./scripts/feeds update -a
 
       - name: Install Feeds
@@ -149,15 +132,6 @@ jobs:
           name: Logs-${{ github.job }}
           path: openwrt/output/logs/${{ github.job }}
 
-      - name: Umount Disk Image
-        id: prepare
-        if: always()
-        run: |
-          sync
-          sudo umount ${LOOP}p1 || true
-          sudo losetup -d $LOOP || true
-          lsblk
-
   Firmware:
     if: needs.Toolchain.outputs.TOOLCHAIN_STATUS == 'success'
     needs: [Toolchain]
@@ -168,20 +142,15 @@ jobs:
       TARGET: ${{ steps.compile.outputs.TARGET }}
       SUBTARGET: ${{ steps.compile.outputs.SUBTARGET }}
       GENERATE_STATUS: ${{ steps.generate.outputs.GENERATE_STATUS }}
+      OPENWRTROOT: ${{ steps.update.outputs.OPENWRTROOT }}
 
     steps:
       - name: Initialization Environment
         id: init
         run: |
-          export LOOP="$(sudo losetup -f -P --show openwrt.img)"
-          echo "LOOP=$LOOP" >> $GITHUB_ENV
-          echo "::set-output name=LOOP::$(echo $LOOP)"
-          mkdir -p openwrt
-          sudo mount ${LOOP}p1 openwrt
-          lsblk
-          sudo chown -R suling:suling openwrt
           cd openwrt
           echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
+          echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
 
       - name: Compile Firmware Packages
         id: compile
@@ -249,15 +218,6 @@ jobs:
           name: Logs-${{ github.job }}
           path: openwrt/output/logs/${{ github.job }}
 
-      - name: Umount Disk Image
-        if: always()
-        id: prepare
-        run: |
-          sync
-          sudo umount ${LOOP}p1 || true
-          sudo losetup -d $LOOP || true
-          lsblk
-
   Extra-Packages:
     if: needs.Firmware.outputs.GENERATE_STATUS == 'success'
     needs: [Firmware]
@@ -277,15 +237,9 @@ jobs:
       - name: Initialization Environment
         id: init
         run: |
-          export LOOP="$(sudo losetup -f -P --show openwrt.img)"
-          echo "LOOP=$LOOP" >> $GITHUB_ENV
-          echo "::set-output name=LOOP::$(echo $LOOP)"
-          mkdir -p openwrt
-          sudo mount ${LOOP}p1 openwrt
-          lsblk
-          sudo chown -R suling:suling openwrt
           cd openwrt
           echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
+          echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
 
       - name: Compile Extra Packages
         id: compile
@@ -336,15 +290,6 @@ jobs:
         with:
           name: Logs-${{ github.job }}
           path: openwrt/output/logs/${{ github.job }}
-
-      - name: Umount Disk Image
-        if: always()
-        id: prepare
-        run: |
-          sync
-          sudo umount ${LOOP}p1 || true
-          sudo losetup -d $LOOP || true
-          lsblk
 
   # Upload:
   #   if: needs.Extra-Packages.outputs.COMPILE_STATUS == 'success'
