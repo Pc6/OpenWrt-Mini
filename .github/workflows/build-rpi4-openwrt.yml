@@ -130,6 +130,7 @@ jobs:
       - name: Initialization Environment
         id: init
         run: |
+          mkdir -p openwrt
           cd openwrt
           echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
           echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
@@ -204,6 +205,7 @@ jobs:
       - name: Initialization Environment
         id: init
         run: |
+          mkdir -p openwrt
           cd openwrt
           echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
           echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
