@@ -89,8 +89,6 @@ jobs:
         run: |
           cd $OPENWRTROOT
           wget -q https://raw.githubusercontent.com/openwrt/openwrt/master/scripts/download.pl -O scripts/download.pl
-          rm -rf dl
-          cp -r /data/cache/dl .
           echo "CONFIG_ALL=y" >> .config
           make defconfig
           make download -j16 IGNORE_ERRORS=1
@@ -115,22 +113,6 @@ jobs:
           echo -e "$(nproc) threads compile"
           make toolchain/compile -j$(nproc) BUILD_LOG=1 || make toolchain/compile -j1 V=s
           echo "::set-output name=TOOLCHAIN_STATUS::success"
-
-      - name: Collect Logs
-        id: toolchain-logs-collect
-        if: always()
-        run: |
-          cd $OPENWRTROOT
-          mkdir -p output/logs
-          mv logs output/logs/${{ github.job }}
-
-      - name: Upload Logs
-        id: toolchain-logs-upload
-        if: always()
-        uses: actions/upload-artifact@main
-        with:
-          name: Logs-${{ github.job }}
-          path: openwrt/output/logs/${{ github.job }}
 
   Firmware:
     if: needs.Toolchain.outputs.TOOLCHAIN_STATUS == 'success'
@@ -203,21 +185,6 @@ jobs:
           cp -r $FIRMWARE $OPENWRTROOT/output/bin/targets/$TARGET
           echo "::set-output name=GENERATE_STATUS::success"
 
-      - name: Collect Logs
-        id: firmware-logs-collect
-        if: always()
-        run: |
-          cd $OPENWRTROOT
-          mv logs output/logs/${{ github.job }}
-
-      - name: Upload Logs
-        id: firmware-logs-upload
-        if: always()
-        uses: actions/upload-artifact@main
-        with:
-          name: Logs-${{ github.job }}
-          path: openwrt/output/logs/${{ github.job }}
-
   Extra-Packages:
     if: needs.Firmware.outputs.GENERATE_STATUS == 'success'
     needs: [Firmware]
@@ -260,14 +227,6 @@ jobs:
           cp -r bin/packages/$PLATFORM $OPENWRTROOT/output/bin/packages
           echo "::set-output name=COMPILE_STATUS::success"
 
-      - name: Collect Logs
-        id: packages-logs-collect
-        if: always()
-        run: |
-          cd $OPENWRTROOT
-          mv logs output/logs/${{ github.job }}
-          [ -e output/bin/targets/$TARGET/$SUBTARGET ] && cp -r output/logs output/bin/targets/$TARGET/$SUBTARGET
-
       - name: Compress Bin Folder
         if: steps.compile.outputs.COMPILE_STATUS == 'success'
         id: compress
@@ -282,14 +241,6 @@ jobs:
         with:
           name: Bin-Archive
           path: openwrt/output
-
-      - name: Upload Logs
-        id: packages-logs-upload
-        if: always()
-        uses: actions/upload-artifact@main
-        with:
-          name: Logs-${{ github.job }}
-          path: openwrt/output/logs/${{ github.job }}
 
   # Upload:
   #   if: needs.Extra-Packages.outputs.COMPILE_STATUS == 'success'
