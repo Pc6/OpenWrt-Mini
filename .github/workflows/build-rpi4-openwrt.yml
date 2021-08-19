@@ -26,12 +26,17 @@ env:
   RUNNER: ubuntu-18.04
 
 jobs:
-  Toolchain:
+  Build:
     runs-on: ubuntu-18.04
 
     outputs:
       TOOLCHAIN_STATUS: ${{ steps.toolchain.outputs.TOOLCHAIN_STATUS }}
       OPENWRTROOT: ${{ steps.update.outputs.OPENWRTROOT }}
+      PLATFORM: ${{ steps.compile.outputs.PLATFORM }}
+      TARGET: ${{ steps.compile.outputs.TARGET }}
+      SUBTARGET: ${{ steps.compile.outputs.SUBTARGET }}
+      GENERATE_STATUS: ${{ steps.generate.outputs.GENERATE_STATUS }}
+      COMPILE_STATUS: ${{ steps.compile.outputs.COMPILE_STATUS }}
 
     steps:
       - name: Checkout
@@ -114,26 +119,6 @@ jobs:
           make toolchain/compile -j$(nproc) BUILD_LOG=1 || make toolchain/compile -j1 V=s
           echo "::set-output name=TOOLCHAIN_STATUS::success"
 
-  Firmware:
-    if: needs.Toolchain.outputs.TOOLCHAIN_STATUS == 'success'
-    needs: [Toolchain]
-    runs-on: ubuntu-18.04
-
-    outputs:
-      PLATFORM: ${{ steps.compile.outputs.PLATFORM }}
-      TARGET: ${{ steps.compile.outputs.TARGET }}
-      SUBTARGET: ${{ steps.compile.outputs.SUBTARGET }}
-      GENERATE_STATUS: ${{ steps.generate.outputs.GENERATE_STATUS }}
-
-    steps:
-      # - name: Initialization Environment
-      #   id: init
-      #   run: |
-      #     mkdir -p openwrt
-      #     cd openwrt
-      #     echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
-      #     echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
-
       - name: Compile Firmware Packages
         id: compile
         timeout-minutes: 330
@@ -184,30 +169,6 @@ jobs:
           mkdir -p $OPENWRTROOT/output/bin/targets/$TARGET
           cp -r $FIRMWARE $OPENWRTROOT/output/bin/targets/$TARGET
           echo "::set-output name=GENERATE_STATUS::success"
-
-  Extra-Packages:
-    if: needs.Firmware.outputs.GENERATE_STATUS == 'success'
-    needs: [Firmware]
-    runs-on: ubuntu-18.04
-
-    outputs:
-      COMPILE_STATUS: ${{ steps.compile.outputs.COMPILE_STATUS }}
-
-    steps:
-      - name: Restore Variables
-        id: restore
-        run: |
-          echo "PLATFORM=$(echo '${{needs.Firmware.outputs.PLATFORM}}')" >> $GITHUB_ENV
-          echo "TARGET=$(echo '${{needs.Firmware.outputs.TARGET}}')" >> $GITHUB_ENV
-          echo "SUBTARGET=$(echo '${{needs.Firmware.outputs.SUBTARGET}}')" >> $GITHUB_ENV
-
-      # - name: Initialization Environment
-      #   id: init
-      #   run: |
-      #     mkdir -p openwrt
-      #     cd openwrt
-      #     echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
-      #     echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
 
       - name: Compile Extra Packages
         id: compile
