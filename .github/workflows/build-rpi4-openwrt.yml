@@ -124,16 +124,15 @@ jobs:
       TARGET: ${{ steps.compile.outputs.TARGET }}
       SUBTARGET: ${{ steps.compile.outputs.SUBTARGET }}
       GENERATE_STATUS: ${{ steps.generate.outputs.GENERATE_STATUS }}
-      OPENWRTROOT: ${{ steps.update.outputs.OPENWRTROOT }}
 
     steps:
-      - name: Initialization Environment
-        id: init
-        run: |
-          mkdir -p openwrt
-          cd openwrt
-          echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
-          echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
+      # - name: Initialization Environment
+      #   id: init
+      #   run: |
+      #     mkdir -p openwrt
+      #     cd openwrt
+      #     echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
+      #     echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
 
       - name: Compile Firmware Packages
         id: compile
@@ -202,13 +201,13 @@ jobs:
           echo "TARGET=$(echo '${{needs.Firmware.outputs.TARGET}}')" >> $GITHUB_ENV
           echo "SUBTARGET=$(echo '${{needs.Firmware.outputs.SUBTARGET}}')" >> $GITHUB_ENV
 
-      - name: Initialization Environment
-        id: init
-        run: |
-          mkdir -p openwrt
-          cd openwrt
-          echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
-          echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
+      # - name: Initialization Environment
+      #   id: init
+      #   run: |
+      #     mkdir -p openwrt
+      #     cd openwrt
+      #     echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
+      #     echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
 
       - name: Compile Extra Packages
         id: compile
